@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/charmbracelet/log"
 )
 
 const (
@@ -38,6 +40,7 @@ func FetchAndInitProject(repoOwner, repoName, branch, projName string) error {
 	}
 
 	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/heads/%s.tar.gz", repoOwner, repoName, branch)
+	log.Info("Fetching template from GitHub", "owner", repoOwner, "repo", repoName)
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to fetch template: %w", err)
@@ -46,6 +49,7 @@ func FetchAndInitProject(repoOwner, repoName, branch, projName string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to fetch template: HTTP %d", resp.StatusCode)
 	}
+	log.Info("Download complete. Extracting and initializing project...", "project", projName)
 	return ExtractAndInitProject(resp.Body, projName)
 }
 
@@ -65,6 +69,7 @@ func ExtractAndInitProject(tarball io.Reader, projName string) error {
 		return fmt.Errorf("failed to resolve project path: %w", err)
 	}
 
+	log.Info("Extracting archive", "project", projName)
 	gzr, err := gzip.NewReader(tarball)
 	if err != nil {
 		return fmt.Errorf("failed to read gzip: %w", err)
@@ -132,9 +137,11 @@ func ExtractAndInitProject(tarball io.Reader, projName string) error {
 		}
 	}
 
+	log.Info("Applying template substitutions...")
 	if err := applyTemplatesInDir(projName, projName); err != nil {
 		return err
 	}
+	log.Info("Project created successfully.", "project", projName)
 	printDir(projName, 0)
 	return nil
 }
